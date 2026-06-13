@@ -160,13 +160,24 @@ def delete_subject(
 def list_tasks(
     subject_id: int | None = None,
     completed: bool | None = None,
+    priority: str | None = None,
+    search: str | None = None,
+    sort_by: str = Query(default="due_at", pattern="^(due_at|priority|created_at|title)$"),
+    sort_dir: str = Query(default="asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ):
-    query = select(models.Task).options(selectinload(models.Task.subject)).order_by(models.Task.due_at)
+    query = select(models.Task).options(selectinload(models.Task.subject))
     if subject_id is not None:
         query = query.where(models.Task.subject_id == subject_id)
     if completed is not None:
         query = query.where(models.Task.completed == completed)
+    if priority is not None:
+        query = query.where(models.Task.priority == priority)
+    if search:
+        like = f"%{search}%"
+        query = query.where(models.Task.title.ilike(like))
+    sort_col = getattr(models.Task, sort_by, models.Task.due_at)
+    query = query.order_by(sort_col.desc() if sort_dir == "desc" else sort_col.asc())
     return [services.task_to_read(task) for task in db.scalars(query).all()]
 
 
@@ -283,6 +294,11 @@ def dashboard_analytics(
     due_today = sum(today_start <= task.due_at < today_end for task in tasks)
     due_next_7_days = sum(next_start <= task.due_at < next_end for task in tasks)
 
+    # Priority distribution
+    pri_low = sum(task.priority == "low" for task in tasks)
+    pri_medium = sum(task.priority == "medium" for task in tasks)
+    pri_high = sum(task.priority == "high" for task in tasks)
+
     workloads = []
     for subject in subjects:
         count = sum(task.subject_id == subject.id for task in tasks)
@@ -298,6 +314,7 @@ def dashboard_analytics(
     current_week_start = local_today - timedelta(days=local_today.weekday())
     first_week_start = current_week_start - timedelta(weeks=7)
     weekly = []
+    tasks_this_week = 0
     for offset in range(8):
         week_start = first_week_start + timedelta(weeks=offset)
         week_end = week_start + timedelta(days=7)
@@ -315,6 +332,12 @@ def dashboard_analytics(
                 completed=count,
             )
         )
+        if week_start == current_week_start:
+            tasks_this_week = count
+
+    completion_rate = round((completed / len(tasks) * 100) if tasks else 0, 1)
+    overdue_rate = round((overdue / len(tasks) * 100) if tasks else 0, 1)
+    productivity_score = round(max(0, min(100, completion_rate - overdue_rate * 1.5)), 1)
 
     return schemas.DashboardAnalytics(
         summary=schemas.AnalyticsSummary(
@@ -325,13 +348,20 @@ def dashboard_analytics(
             urgent=urgent,
             due_today=due_today,
             due_next_7_days=due_next_7_days,
-            completion_rate=round((completed / len(tasks) * 100) if tasks else 0, 1),
+            completion_rate=completion_rate,
         ),
         status_distribution=schemas.StatusDistribution(
             completed=completed, pending=pending, overdue=overdue
         ),
+        priority_distribution=schemas.PriorityDistribution(
+            low=pri_low, medium=pri_medium, high=pri_high
+        ),
         subject_workload=workloads,
         weekly_completion=weekly,
+        study_insights=schemas.StudyInsight(
+            productivity_score=productivity_score,
+            tasks_this_week=tasks_this_week,
+        ),
     )
 
 

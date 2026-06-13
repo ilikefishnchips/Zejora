@@ -36,6 +36,7 @@ class Task(Base):
     due_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    estimated_hours: Mapped[float | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

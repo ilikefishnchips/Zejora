@@ -55,6 +55,7 @@ def task_to_read(task: models.Task, now: datetime | None = None) -> schemas.Task
         subject_id=task.subject_id,
         due_at=utc_aware(task.due_at),
         priority=task.priority,
+        estimated_hours=task.estimated_hours,
         completed=task.completed,
         completed_at=utc_aware(task.completed_at),
         created_at=utc_aware(task.created_at),

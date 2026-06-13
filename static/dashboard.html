@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,6 +24,7 @@
       <nav class="dashboard-nav" aria-label="Dashboard navigation">
         <button class="nav-item active" data-view="all"><span class="nav-icon">⌂</span> My day <span class="nav-count" id="all-count">0</span></button>
         <button class="nav-item" data-scroll="overdue"><span class="nav-icon">!</span> Overdue <span class="nav-count" id="overdue-count">0</span></button>
+        <button class="nav-item" data-view="calendar"><span class="nav-icon">◫</span> Calendar</button>
         <button class="nav-item" data-scroll="analytics"><span class="nav-icon">↗</span> Insights</button>
       </nav>
 
@@ -35,6 +36,15 @@
       <div class="sidebar-empty" id="subject-empty">
         <p>No subjects yet.</p>
         <button class="text-button" data-action="add-subject">Add your first</button>
+      </div>
+
+      <div class="sidebar-tools">
+        <button class="sidebar-tool-btn" id="dark-mode-toggle">
+          <span data-theme-icon>☽</span><span>Dark mode</span>
+        </button>
+        <button class="sidebar-tool-btn" id="reminder-settings-btn">
+          <span>🔔</span><span>Reminders</span>
+        </button>
       </div>
 
       <div class="sidebar-note">
@@ -50,10 +60,18 @@
         <button class="icon-button mobile-menu" id="open-sidebar" aria-label="Open navigation">☰</button>
         <div class="dashboard-date"><span id="date-label">Today</span><small id="focus-label">All subjects</small></div>
         <div class="header-actions">
+          <button class="icon-button header-icon-btn" id="header-dark-mode" title="Toggle dark mode" aria-label="Toggle dark mode"><span data-theme-icon>☽</span></button>
+          <button class="icon-button header-icon-btn" id="notification-toggle" title="Notification settings" aria-label="Notification settings">🔔</button>
           <button class="button button-soft" id="header-add-subject">+ Subject</button>
           <button class="button button-primary button-compact" id="add-task-button">+ Add task</button>
         </div>
       </header>
+
+      <div class="focus-banner" id="focus-banner" hidden>
+        <span class="focus-dot"></span>
+        <span>Focus mode — <strong id="focus-subject-name"></strong></span>
+        <button class="text-button" id="exit-focus">Exit focus ×</button>
+      </div>
 
       <section class="dashboard-hero">
         <div>
@@ -73,6 +91,28 @@
         <article class="stat-card"><span class="stat-icon sage-bg">✓</span><div><strong id="stat-completed">0</strong><span>Completed</span></div></article>
       </section>
 
+      <section class="search-filter-bar" aria-label="Search and filter">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input class="search-input" id="search-input" type="search" placeholder="Search tasks…" aria-label="Search tasks">
+        </div>
+        <div class="filter-row">
+          <div class="filter-chips" role="group" aria-label="Filter by status">
+            <button class="filter-chip active" data-filter-status="all">All</button>
+            <button class="filter-chip" data-filter-status="pending">Pending</button>
+            <button class="filter-chip" data-filter-status="urgent">Urgent</button>
+            <button class="filter-chip" data-filter-status="overdue">Overdue</button>
+            <button class="filter-chip" data-filter-status="completed">Done</button>
+          </div>
+          <div class="filter-chips" role="group" aria-label="Filter by priority">
+            <button class="filter-chip active" data-filter-priority="all">Any priority</button>
+            <button class="filter-chip" data-filter-priority="high">High</button>
+            <button class="filter-chip" data-filter-priority="medium">Medium</button>
+            <button class="filter-chip" data-filter-priority="low">Low</button>
+          </div>
+        </div>
+      </section>
+
       <section class="empty-dashboard" id="empty-dashboard" hidden>
         <div class="empty-illustration"><span>✦</span></div>
         <span class="script-small">a fresh page</span>
@@ -83,50 +123,160 @@
 
       <div id="task-sections">
         <section class="task-section" id="today-section">
-          <div class="task-section-heading"><div><span class="section-dot coral-bg"></span><h2>Today</h2><span class="group-count" id="today-count">0</span></div><button class="text-button" data-action="add-task">Add task +</button></div>
+          <div class="task-section-heading">
+            <div><span class="section-dot coral-bg"></span><h2>Today</h2><span class="group-count" id="today-count">0</span></div>
+            <button class="text-button" data-action="add-task">Add task +</button>
+          </div>
           <div class="task-list" id="today-list"></div>
           <div class="group-empty" id="today-empty">Nothing due today. A little breathing room.</div>
         </section>
 
         <section class="task-section" id="overdue-section">
-          <div class="task-section-heading"><div><span class="section-dot red-bg"></span><h2>Overdue</h2><span class="group-count" id="overdue-group-count">0</span></div></div>
+          <div class="task-section-heading">
+            <div><span class="section-dot red-bg"></span><h2>Overdue</h2><span class="group-count" id="overdue-group-count">0</span></div>
+          </div>
           <div class="task-list" id="overdue-list"></div>
           <div class="group-empty" id="overdue-empty">No overdue work. Nicely handled.</div>
         </section>
 
         <section class="task-section" id="upcoming-section">
-          <div class="task-section-heading"><div><span class="section-dot lavender-bg"></span><h2>Upcoming</h2><span class="group-count" id="upcoming-count">0</span></div></div>
+          <div class="task-section-heading">
+            <div><span class="section-dot lavender-bg"></span><h2>Upcoming</h2><span class="group-count" id="upcoming-count">0</span></div>
+          </div>
           <div class="task-list" id="upcoming-list"></div>
           <div class="group-empty" id="upcoming-empty">Your next seven days are clear.</div>
         </section>
 
         <section class="task-section" id="later-section">
-          <div class="task-section-heading"><div><span class="section-dot sage-bg"></span><h2>Later</h2><span class="group-count" id="later-count">0</span></div></div>
+          <div class="task-section-heading">
+            <div><span class="section-dot sage-bg"></span><h2>Later</h2><span class="group-count" id="later-count">0</span></div>
+          </div>
           <div class="task-list" id="later-list"></div>
           <div class="group-empty" id="later-empty">No longer-range tasks yet.</div>
         </section>
 
         <section class="task-section" id="completed-section">
-          <div class="task-section-heading"><div><span class="section-dot sage-bg"></span><h2>Completed</h2><span class="group-count" id="completed-count">0</span></div></div>
+          <div class="task-section-heading">
+            <div><span class="section-dot sage-bg"></span><h2>Completed</h2><span class="group-count" id="completed-count">0</span></div>
+          </div>
           <div class="task-list" id="completed-list"></div>
           <div class="group-empty" id="completed-empty">Completed tasks will collect here.</div>
         </section>
       </div>
 
+      <!-- Calendar Section -->
+      <section class="calendar-section" id="calendar-section">
+        <div class="calendar-section-header">
+          <div>
+            <p class="section-kicker">Deadline view</p>
+            <h2 class="section-title">Calendar.</h2>
+          </div>
+          <div class="calendar-nav">
+            <button class="icon-button" id="cal-prev" aria-label="Previous month">‹</button>
+            <span id="cal-month-label" class="cal-month-label"></span>
+            <button class="icon-button" id="cal-next" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="calendar-wrap">
+          <div class="calendar-grid" id="calendar-grid"></div>
+          <div class="calendar-day-panel" id="calendar-day-panel" hidden>
+            <div class="calendar-day-panel-header">
+              <span id="calendar-selected-date"></span>
+              <button class="icon-button" id="close-calendar-panel" aria-label="Close">×</button>
+            </div>
+            <div id="calendar-day-task-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Study Insights Section -->
+      <section class="study-insights-section" id="insights-section">
+        <div class="section-header-row">
+          <div>
+            <p class="section-kicker">Study performance</p>
+            <h2 class="section-title">Your insights.</h2>
+          </div>
+        </div>
+        <div class="insights-cards-grid">
+          <article class="insight-card productivity-card">
+            <div class="insight-icon-wrap coral-bg">⚡</div>
+            <div class="insight-body">
+              <span class="insight-label">Productivity Score</span>
+              <strong class="insight-value" id="productivity-score">—</strong>
+              <span class="insight-sub" id="productivity-label">Loading…</span>
+            </div>
+            <div class="productivity-track">
+              <div class="productivity-fill" id="productivity-fill" style="--score:0"></div>
+            </div>
+          </article>
+          <article class="insight-card">
+            <div class="insight-icon-wrap lavender-bg">📚</div>
+            <div class="insight-body">
+              <span class="insight-label">Most Active Subject</span>
+              <strong class="insight-value" id="busiest-subject">—</strong>
+              <span class="insight-sub" id="busiest-subject-sub">tasks</span>
+            </div>
+          </article>
+          <article class="insight-card">
+            <div class="insight-icon-wrap sage-bg">⏱</div>
+            <div class="insight-body">
+              <span class="insight-label">Est. Hours Pending</span>
+              <strong class="insight-value" id="hours-pending">—</strong>
+              <span class="insight-sub">hours of work ahead</span>
+            </div>
+          </article>
+          <article class="insight-card">
+            <div class="insight-icon-wrap yellow-bg">📈</div>
+            <div class="insight-body">
+              <span class="insight-label">Completed This Week</span>
+              <strong class="insight-value" id="week-completed">—</strong>
+              <span class="insight-sub">tasks finished</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Analytics / Charts Section -->
       <section class="analytics-section" id="analytics-section">
-        <div class="section-heading dashboard-section-heading">
-          <div><p class="section-kicker">Your study rhythm</p><h2>Insights without judgment.</h2></div>
-          <p>A live look at where your workload sits and how your momentum is building.</p>
+        <div class="section-header-row">
+          <div>
+            <p class="section-kicker">Your study rhythm</p>
+            <h2 class="section-title">Insights without judgment.</h2>
+          </div>
+          <p class="section-desc">A live look at where your workload sits and how your momentum is building.</p>
         </div>
         <div class="analytics-grid">
-          <article class="chart-card chart-wide"><div class="chart-card-title"><div><span>Completion trend</span><strong>Last 8 weeks</strong></div><span class="trend-pill" id="trend-total">0 finished</span></div><div class="chart-wrap"><canvas id="trend-chart"></canvas></div></article>
-          <article class="chart-card"><div class="chart-card-title"><div><span>Task status</span><strong>At a glance</strong></div></div><div class="chart-wrap doughnut-wrap"><canvas id="status-chart"></canvas><div class="chart-center"><strong id="chart-completion">0%</strong><span>done</span></div></div></article>
-          <article class="chart-card chart-wide"><div class="chart-card-title"><div><span>Workload</span><strong>Tasks by subject</strong></div></div><div class="chart-wrap"><canvas id="subject-chart"></canvas></div></article>
+          <article class="chart-card chart-wide">
+            <div class="chart-card-title">
+              <div><span>Completion trend</span><strong>Last 8 weeks</strong></div>
+              <span class="trend-pill" id="trend-total">0 finished</span>
+            </div>
+            <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+          </article>
+          <article class="chart-card">
+            <div class="chart-card-title"><div><span>Task status</span><strong>At a glance</strong></div></div>
+            <div class="chart-wrap doughnut-wrap">
+              <canvas id="status-chart"></canvas>
+              <div class="chart-center"><strong id="chart-completion">0%</strong><span>done</span></div>
+            </div>
+          </article>
+          <article class="chart-card">
+            <div class="chart-card-title"><div><span>Priority mix</span><strong>Task breakdown</strong></div></div>
+            <div class="chart-wrap doughnut-wrap">
+              <canvas id="priority-chart"></canvas>
+              <div class="chart-center"><strong id="chart-total">0</strong><span>tasks</span></div>
+            </div>
+          </article>
+          <article class="chart-card chart-wide">
+            <div class="chart-card-title"><div><span>Workload</span><strong>Tasks by subject</strong></div></div>
+            <div class="chart-wrap"><canvas id="subject-chart"></canvas></div>
+          </article>
         </div>
       </section>
     </main>
   </div>
 
+  <!-- Subject Modal -->
   <dialog class="modal" id="subject-modal">
     <form method="dialog" class="modal-card" id="subject-form">
       <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
@@ -142,12 +292,18 @@
         <label><input type="radio" name="color" value="#C9C3E6"><span style="--swatch:#C9C3E6"></span></label>
         <label><input type="radio" name="color" value="#F4D58D"><span style="--swatch:#F4D58D"></span></label>
         <label><input type="radio" name="color" value="#9EC5E6"><span style="--swatch:#9EC5E6"></span></label>
+        <label><input type="radio" name="color" value="#F7B2D9"><span style="--swatch:#F7B2D9"></span></label>
       </div>
       <p class="form-error" id="subject-error"></p>
-      <div class="modal-actions"><button class="text-button modal-delete" id="delete-subject-button" type="button" hidden>Delete subject</button><button class="button button-soft" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit" value="default">Save subject</button></div>
+      <div class="modal-actions">
+        <button class="text-button modal-delete" id="delete-subject-button" type="button" hidden>Delete subject</button>
+        <button class="button button-soft" type="button" data-close-dialog>Cancel</button>
+        <button class="button button-primary" type="submit" value="default">Save subject</button>
+      </div>
     </form>
   </dialog>
 
+  <!-- Task Modal -->
   <dialog class="modal" id="task-modal">
     <form method="dialog" class="modal-card task-modal-card" id="task-form">
       <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
@@ -160,22 +316,101 @@
         <label>Subject<select id="task-subject" required></select></label>
         <label>Due date and time<input id="task-due" type="datetime-local" required></label>
       </div>
-      <fieldset><legend>Priority</legend><div class="priority-options">
-        <label><input type="radio" name="priority" value="low"><span>Low</span></label>
-        <label><input type="radio" name="priority" value="medium" checked><span>Medium</span></label>
-        <label><input type="radio" name="priority" value="high"><span>High</span></label>
-      </div></fieldset>
+      <div class="form-row">
+        <label>Est. study hours <span>(optional)</span><input id="task-hours" type="number" min="0" max="100" step="0.5" placeholder="e.g. 2.5"></label>
+      </div>
+      <fieldset>
+        <legend>Priority</legend>
+        <div class="priority-options">
+          <label><input type="radio" name="priority" value="low"><span>Low</span></label>
+          <label><input type="radio" name="priority" value="medium" checked><span>Medium</span></label>
+          <label><input type="radio" name="priority" value="high"><span>High</span></label>
+        </div>
+      </fieldset>
       <p class="form-error" id="task-error"></p>
-      <div class="modal-actions"><button class="button button-soft" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit" value="default">Save task</button></div>
+      <div class="modal-actions">
+        <button class="button button-soft" type="button" data-close-dialog>Cancel</button>
+        <button class="button button-primary" type="submit" value="default">Save task</button>
+      </div>
     </form>
   </dialog>
 
+  <!-- Confirm Modal -->
   <dialog class="modal" id="confirm-modal">
     <div class="modal-card confirm-card">
       <span class="confirm-icon" id="confirm-icon">!</span>
       <h2 id="confirm-title">Are you sure?</h2>
       <p id="confirm-message"></p>
-      <div class="modal-actions"><button class="button button-soft" id="confirm-cancel">Cancel</button><button class="button button-danger" id="confirm-accept">Delete</button></div>
+      <div class="modal-actions">
+        <button class="button button-soft" id="confirm-cancel">Cancel</button>
+        <button class="button button-danger" id="confirm-accept">Delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Reminder Settings Modal -->
+  <dialog class="modal" id="reminder-modal">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
+      <span class="script-small">never miss a deadline</span>
+      <h2>Reminder Settings</h2>
+      <p class="modal-intro">Configure how Zejora alerts you about upcoming deadlines.</p>
+      <div class="reminder-settings">
+        <label class="toggle-row">
+          <div class="toggle-label-text">
+            <strong>Browser notifications</strong>
+            <span>Receive alerts in your browser</span>
+          </div>
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle-input" id="notif-enabled" checked>
+            <span class="toggle-switch"></span>
+          </div>
+        </label>
+        <label class="toggle-row">
+          <div class="toggle-label-text">
+            <strong>24-hour reminder</strong>
+            <span>Alert when task is due within 24 hours</span>
+          </div>
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle-input" id="notif-24h" checked>
+            <span class="toggle-switch"></span>
+          </div>
+        </label>
+        <label class="toggle-row">
+          <div class="toggle-label-text">
+            <strong>1-hour reminder</strong>
+            <span>Alert when task is due within 1 hour</span>
+          </div>
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle-input" id="notif-1h" checked>
+            <span class="toggle-switch"></span>
+          </div>
+        </label>
+        <label class="toggle-row">
+          <div class="toggle-label-text">
+            <strong>Overdue alerts</strong>
+            <span>Remind me about overdue tasks</span>
+          </div>
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle-input" id="notif-overdue" checked>
+            <span class="toggle-switch"></span>
+          </div>
+        </label>
+        <label class="reminder-interval-label">
+          Check interval
+          <select id="reminder-interval" class="reminder-interval-select">
+            <option value="60000">Every minute</option>
+            <option value="300000" selected>Every 5 minutes</option>
+            <option value="900000">Every 15 minutes</option>
+            <option value="1800000">Every 30 minutes</option>
+          </select>
+        </label>
+        <div id="notif-permission-status" class="notif-status"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="button button-soft" type="button" data-close-dialog>Close</button>
+        <button class="button button-primary" id="save-reminders">Save settings</button>
+      </div>
     </div>
   </dialog>
 

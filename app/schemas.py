@@ -60,6 +60,7 @@ class TaskBase(BaseModel):
     subject_id: int
     due_at: datetime
     priority: Priority = "medium"
+    estimated_hours: float | None = Field(default=None, ge=0, le=100)
 
     @field_validator("title")
     @classmethod
@@ -91,6 +92,7 @@ class TaskUpdate(BaseModel):
     due_at: datetime | None = None
     priority: Priority | None = None
     completed: bool | None = None
+    estimated_hours: float | None = Field(default=None, ge=0, le=100)
 
     @field_validator("title")
     @classmethod
@@ -139,6 +141,12 @@ class StatusDistribution(BaseModel):
     overdue: int
 
 
+class PriorityDistribution(BaseModel):
+    low: int
+    medium: int
+    high: int
+
+
 class SubjectWorkload(BaseModel):
     subject_id: int
     name: str
@@ -150,6 +158,11 @@ class TrendPoint(BaseModel):
     week_start: str
     label: str
     completed: int
+
+
+class StudyInsight(BaseModel):
+    productivity_score: float
+    tasks_this_week: int
 
 
 class AnalyticsSummary(BaseModel):
@@ -166,6 +179,7 @@ class AnalyticsSummary(BaseModel):
 class DashboardAnalytics(BaseModel):
     summary: AnalyticsSummary
     status_distribution: StatusDistribution
+    priority_distribution: PriorityDistribution
     subject_workload: list[SubjectWorkload]
     weekly_completion: list[TrendPoint]
-
+    study_insights: StudyInsight
