@@ -3,7 +3,6 @@ const state = {
   subjects: [],
   tasks: [],
   analytics: null,
-  focusSubjectId: null,
   charts: {},
   calendarDate: new Date(),
   calendarSelectedDate: null,
@@ -223,7 +222,6 @@ function taskCard(task) {
   const urgentBadge = task.state === 'urgent' ? '<span class="state-badge">Due soon</span>' : '';
   const overdueBadge = task.state === 'overdue' ? '<span class="state-badge overdue-badge">Overdue</span>' : '';
   const desc = task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : '';
-  const hours = task.estimated_hours != null ? `<span class="hours-tag">⏱ ${task.estimated_hours}h</span>` : '';
   return `
     <article class="task-card state-${task.state}" data-task-id="${task.id}">
       <input class="task-check" type="checkbox" ${task.completed ? 'checked' : ''}
@@ -233,7 +231,7 @@ function taskCard(task) {
         <div class="task-title-row">
           <span class="task-title">${escapeHtml(task.title)}</span>
           <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-          ${urgentBadge}${overdueBadge}${hours}
+          ${urgentBadge}${overdueBadge}
         </div>
         <div class="task-meta">
           <span class="task-subject"><i class="subject-dot" style="background:${task.subject.color}"></i>${escapeHtml(task.subject.name)}</span>
@@ -250,7 +248,6 @@ function taskCard(task) {
 
 function applyFilters(tasks) {
   let f = tasks;
-  if (state.focusSubjectId) f = f.filter((t) => t.subject_id === state.focusSubjectId);
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
     f = f.filter((t) =>
@@ -307,8 +304,8 @@ function renderTaskGroups() {
 // ─── Subjects ─────────────────────────────────────────────────────────────────
 function renderSubjects() {
   $('#subject-list').innerHTML = state.subjects.map((s) => `
-    <div class="subject-row ${state.focusSubjectId === s.id ? 'active' : ''}" data-subject-id="${s.id}">
-      <button class="subject-filter" data-action="focus-subject" title="Focus on ${escapeHtml(s.name)}">
+    <div class="subject-row" data-subject-id="${s.id}">
+      <button class="subject-filter" data-action="focus-subject" title="${escapeHtml(s.name)}">
         <i class="subject-dot" style="background:${s.color}"></i>
         <span>${escapeHtml(s.name)}</span>
         <span class="subject-task-count">${s.task_count}</span>
@@ -318,18 +315,7 @@ function renderSubjects() {
   $('#subject-empty').hidden = state.subjects.length > 0;
   $('#all-count').textContent = state.tasks.length;
   $('#overdue-count').textContent = state.analytics?.summary.overdue || 0;
-  const active = state.subjects.find((s) => s.id === state.focusSubjectId);
-  $('#focus-label').textContent = active ? `Focused on ${active.name}` : 'All subjects';
-  $('#dashboard-subtitle').textContent = active
-    ? `A clear view of everything moving in ${active.name}.`
-    : 'Here is what deserves your attention today.';
-  const banner = $('#focus-banner');
-  if (active) {
-    $('#focus-subject-name').textContent = active.name;
-    banner.hidden = false;
-  } else {
-    banner.hidden = true;
-  }
+  $('#dashboard-subtitle').textContent = 'Here is what deserves your attention today.';
 }
 
 // ─── Summary cards ────────────────────────────────────────────────────────────
@@ -420,11 +406,6 @@ function renderInsights() {
     $('#busiest-subject-sub').textContent = '';
   }
 
-  const hoursPending = state.tasks
-    .filter((t) => !t.completed && t.estimated_hours != null)
-    .reduce((sum, t) => sum + t.estimated_hours, 0);
-  $('#hours-pending').textContent = hoursPending > 0 ? hoursPending.toFixed(1) : '—';
-
   $('#week-completed').textContent = ins.tasks_this_week;
 }
 
@@ -512,9 +493,6 @@ async function refreshData() {
     state.subjects = subjects;
     state.tasks = tasks;
     state.analytics = analytics;
-    if (state.focusSubjectId && !subjects.some((s) => s.id === state.focusSubjectId)) {
-      state.focusSubjectId = null;
-    }
     renderAll();
     setTimeout(checkDeadlines, 1500);
   } catch (err) {
@@ -557,7 +535,7 @@ function openTaskModal(task = null) {
   $('#task-due').value = task ? toDatetimeLocal(task.due_at) : defaultDueTime();
   $('#task-hours').value = task?.estimated_hours ?? '';
   $('#task-modal-title').textContent = task ? 'Edit task' : 'Add a task';
-  populateSubjectSelect(task?.subject_id || state.focusSubjectId || state.subjects[0].id);
+  populateSubjectSelect(task?.subject_id || state.subjects[0].id);
   $(`input[name="priority"][value="${task?.priority || 'medium'}"]`).checked = true;
   $('#task-modal').showModal();
   setTimeout(() => $('#task-title').focus(), 50);
@@ -687,12 +665,6 @@ document.addEventListener('click', async (event) => {
   if (action === 'delete-task') await deleteTask(task);
   if (action === 'toggle-task') await toggleTask(task, t.checked);
   if (action === 'edit-subject') openSubjectModal(subject);
-  if (action === 'focus-subject') {
-    state.focusSubjectId = state.focusSubjectId === subject.id ? null : subject.id;
-    renderSubjects();
-    renderTaskGroups();
-    closeSidebar();
-  }
   if (action === 'select-cal-day') {
     state.calendarSelectedDate = t.dataset.calDate;
     renderCalendar();
@@ -718,7 +690,6 @@ $$('[data-scroll]').forEach((btn) => btn.addEventListener('click', () => {
   closeSidebar();
 }));
 $('.nav-item[data-view="all"]').addEventListener('click', () => {
-  state.focusSubjectId = null;
   renderSubjects();
   renderTaskGroups();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -727,11 +698,6 @@ $('.nav-item[data-view="all"]').addEventListener('click', () => {
 $('.nav-item[data-view="calendar"]').addEventListener('click', () => {
   $('#calendar-section').scrollIntoView({ behavior: 'smooth' });
   closeSidebar();
-});
-$('#exit-focus').addEventListener('click', () => {
-  state.focusSubjectId = null;
-  renderSubjects();
-  renderTaskGroups();
 });
 
 // Dark mode

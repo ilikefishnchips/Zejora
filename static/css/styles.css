@@ -207,11 +207,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .dashboard-date small { color: var(--muted); }
 .header-actions { display: flex; gap: .5rem; align-items: center; margin-left: auto; }
 
-/* Focus banner */
-.focus-banner { display: flex; align-items: center; gap: .8rem; padding: .7rem 1.2rem; background: var(--lavender); border-radius: 999px; margin: 1.2rem 0 0; font-size: .85rem; font-weight: 500; }
-.focus-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--lavender-strong); flex-shrink: 0; }
-.focus-banner .text-button { margin-left: auto; font-size: .8rem; }
-
 /* Hero */
 .dashboard-hero { padding: 4rem 0 2.6rem; display: flex; justify-content: space-between; align-items: center; }
 .dashboard-hero h1 { font-size: clamp(3.2rem, 6vw, 5.2rem); line-height: 1; letter-spacing: -.05em; font-weight: 600; margin: .4rem 0 1rem; }

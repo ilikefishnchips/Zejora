@@ -58,7 +58,7 @@
     <main class="dashboard-main">
       <header class="dashboard-header">
         <button class="icon-button mobile-menu" id="open-sidebar" aria-label="Open navigation">☰</button>
-        <div class="dashboard-date"><span id="date-label">Today</span><small id="focus-label">All subjects</small></div>
+        <div class="dashboard-date"><span id="date-label">Today</span></div>
         <div class="header-actions">
           <button class="icon-button header-icon-btn" id="header-dark-mode" title="Toggle dark mode" aria-label="Toggle dark mode"><span data-theme-icon>☽</span></button>
           <button class="icon-button header-icon-btn" id="notification-toggle" title="Notification settings" aria-label="Notification settings">🔔</button>
@@ -67,11 +67,6 @@
         </div>
       </header>
 
-      <div class="focus-banner" id="focus-banner" hidden>
-        <span class="focus-dot"></span>
-        <span>Focus mode — <strong id="focus-subject-name"></strong></span>
-        <button class="text-button" id="exit-focus">Exit focus ×</button>
-      </div>
 
       <section class="dashboard-hero">
         <div>
@@ -215,14 +210,6 @@
               <span class="insight-label">Most Active Subject</span>
               <strong class="insight-value" id="busiest-subject">—</strong>
               <span class="insight-sub" id="busiest-subject-sub">tasks</span>
-            </div>
-          </article>
-          <article class="insight-card">
-            <div class="insight-icon-wrap sage-bg">⏱</div>
-            <div class="insight-body">
-              <span class="insight-label">Est. Hours Pending</span>
-              <strong class="insight-value" id="hours-pending">—</strong>
-              <span class="insight-sub">hours of work ahead</span>
             </div>
           </article>
           <article class="insight-card">
