@@ -379,7 +379,7 @@ SQLite provides relational integrity without requiring a separate database serve
 The current application is intentionally a local, single-student system. Logical future extensions include:
 
 - User authentication and per-user data ownership
-- Browser or email deadline reminders
+- email deadline reminders
 - Alembic-managed database migrations
 - Calendar and learning-management-system integrations
 - Study-session or Pomodoro tracking
