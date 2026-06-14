@@ -230,7 +230,10 @@ def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)):
     data = payload.model_dump()
     data["due_at"] = services.utc_naive(data["due_at"])
     if data["completed"]:
-        data["completed_at"] = services.utc_naive(datetime.now(UTC))
+        completed_at = services.utc_naive(datetime.now(UTC))
+        data["completed_at"] = completed_at
+        delay_secs = (completed_at - data["due_at"]).total_seconds()
+        data["delay_days"] = round(max(0.0, delay_secs / 86400), 4)
     task = models.Task(**data)
     db.add(task)
     db.commit()
@@ -251,9 +254,14 @@ def update_task(task_id: int, payload: schemas.TaskUpdate, db: Session = Depends
     if "due_at" in updates:
         updates["due_at"] = services.utc_naive(updates["due_at"])
     if "completed" in updates and updates["completed"] != task.completed:
-        updates["completed_at"] = (
-            services.utc_naive(datetime.now(UTC)) if updates["completed"] else None
-        )
+        if updates["completed"]:
+            completed_at = services.utc_naive(datetime.now(UTC))
+            updates["completed_at"] = completed_at
+            delay_secs = (completed_at - task.due_at).total_seconds()
+            updates["delay_days"] = round(max(0.0, delay_secs / 86400), 4)
+        else:
+            updates["completed_at"] = None
+            updates["delay_days"] = None
     for field, value in updates.items():
         setattr(task, field, value)
     db.commit()
@@ -362,6 +370,139 @@ def dashboard_analytics(
             productivity_score=productivity_score,
             tasks_this_week=tasks_this_week,
         ),
+    )
+
+
+@app.patch("/api/tasks/{task_id}/postpone", response_model=schemas.TaskRead)
+def postpone_task(
+    task_id: int, payload: schemas.PostponePayload, db: Session = Depends(get_db)
+):
+    task = task_or_404(db, task_id)
+    if task.completed:
+        raise HTTPException(status_code=400, detail="Cannot postpone a completed task")
+    task.due_at = task.due_at + timedelta(days=payload.days)
+    task.postpone_count = (task.postpone_count or 0) + 1
+    db.commit()
+    return services.task_to_read(task_or_404(db, task_id))
+
+
+@app.get("/api/analytics/procrastination", response_model=schemas.ProcrastinationAnalytics)
+def procrastination_analytics(db: Session = Depends(get_db)):
+    from datetime import date as date_type
+    tasks = db.scalars(
+        select(models.Task).options(selectinload(models.Task.subject))
+    ).all()
+    subjects = db.scalars(select(models.Subject).order_by(func.lower(models.Subject.name))).all()
+
+    now = services.utc_naive(datetime.now(UTC))
+    total = len(tasks)
+    completed_tasks = [t for t in tasks if t.completed and t.completed_at]
+
+    delays = [max(0.0, (t.completed_at - t.due_at).total_seconds() / 86400) for t in completed_tasks]
+    avg_delay = round(sum(delays) / len(delays), 2) if delays else 0.0
+    overdue_count = sum(1 for t in tasks if not t.completed and t.due_at < now)
+    overdue_rate = round(overdue_count / total * 100, 1) if total else 0.0
+    avg_postpone = round(sum(t.postpone_count for t in tasks) / total, 2) if total else 0.0
+
+    raw_score = 100 - avg_delay * 8 - overdue_rate * 0.8 - avg_postpone * 5
+    score = round(max(0.0, min(100.0, raw_score)), 1)
+    if score >= 85:
+        level = "Excellent"
+    elif score >= 70:
+        level = "Good"
+    elif score >= 50:
+        level = "Moderate"
+    elif score >= 30:
+        level = "Serious"
+    else:
+        level = "Chronic Procrastinator"
+
+    by_subject = []
+    most_avoided = []
+    for subj in subjects:
+        st = [t for t in tasks if t.subject_id == subj.id]
+        sc = [t for t in st if t.completed and t.completed_at]
+        sd = [max(0.0, (t.completed_at - t.due_at).total_seconds() / 86400) for t in sc]
+        so = sum(1 for t in st if not t.completed and t.due_at < now)
+        s_avg = round(sum(sd) / len(sd), 2) if sd else 0.0
+        s_pct = round(so / len(st) * 100, 1) if st else 0.0
+        by_subject.append(schemas.ProcrastinationBySubject(
+            subject_id=subj.id, name=subj.name, color=subj.color,
+            avg_delay=s_avg, overdue_pct=s_pct,
+            total_tasks=len(st), completed_tasks=len(sc),
+        ))
+        if s_pct > 40 or s_avg > 2:
+            most_avoided.append(subj.name)
+
+    by_priority = []
+    for pri in ["low", "medium", "high"]:
+        pt = [t for t in tasks if t.priority == pri]
+        pc = [t for t in pt if t.completed and t.completed_at]
+        pd = [max(0.0, (t.completed_at - t.due_at).total_seconds() / 86400) for t in pc]
+        po = sum(1 for t in pt if not t.completed and t.due_at < now)
+        by_priority.append(schemas.ProcrastinationByPriority(
+            priority=pri,
+            avg_delay=round(sum(pd) / len(pd), 2) if pd else 0.0,
+            overdue_pct=round(po / len(pt) * 100, 1) if pt else 0.0,
+        ))
+
+    today = datetime.now(UTC).date()
+    current_week_start = today - timedelta(days=today.weekday())
+    first_week_start = current_week_start - timedelta(weeks=7)
+    weekly_delay_trend = []
+    for offset in range(8):
+        ws = first_week_start + timedelta(weeks=offset)
+        we = ws + timedelta(days=7)
+        wc = [
+            t for t in completed_tasks
+            if t.completed_at and ws <= services.utc_aware(t.completed_at).date() < we
+        ]
+        wd = [max(0.0, (t.completed_at - t.due_at).total_seconds() / 86400) for t in wc]
+        weekly_delay_trend.append(schemas.DelayTrendPoint(
+            week_start=ws.isoformat(),
+            label=ws.strftime("%b %d"),
+            avg_delay=round(sum(wd) / len(wd), 2) if wd else 0.0,
+            task_count=len(wc),
+        ))
+
+    heatmap_counts: dict[tuple[int, int], int] = {}
+    for t in completed_tasks:
+        dt = services.utc_aware(t.completed_at)
+        key = (dt.weekday(), dt.hour)
+        heatmap_counts[key] = heatmap_counts.get(key, 0) + 1
+    heatmap = [
+        schemas.HeatmapCell(day=d, hour=h, count=c)
+        for (d, h), c in heatmap_counts.items()
+    ]
+
+    recs: list[str] = []
+    if avg_delay > 2:
+        recs.append(f"You complete tasks an average of {avg_delay:.1f} days late. Try breaking assignments into smaller steps and starting earlier.")
+    if overdue_rate > 30:
+        recs.append(f"{overdue_rate}% of your tasks are overdue. Set personal deadlines 2–3 days ahead of the real one.")
+    if avg_postpone > 1:
+        recs.append(f"Tasks are postponed on average {avg_postpone:.1f} times. Enable browser reminders to reduce rescheduling.")
+    if most_avoided:
+        recs.append(f"You tend to delay work in: {', '.join(most_avoided[:3])}. Schedule these subjects during your peak productivity hours.")
+    high_postpone = [t for t in tasks if not t.completed and t.postpone_count >= 3]
+    if high_postpone:
+        titles = ", ".join(t.title for t in high_postpone[:2])
+        recs.append(f"Some tasks have been postponed 3+ times ({titles}). Consider breaking them into smaller subtasks.")
+    if not recs:
+        recs.append("Excellent work! You are consistently meeting your deadlines. Keep up the great habits.")
+
+    return schemas.ProcrastinationAnalytics(
+        procrastination_score=score,
+        productivity_level=level,
+        avg_delay_days=avg_delay,
+        overdue_rate=overdue_rate,
+        avg_postpone_count=avg_postpone,
+        by_subject=by_subject,
+        by_priority=by_priority,
+        weekly_delay_trend=weekly_delay_trend,
+        heatmap=heatmap,
+        recommendations=recs,
+        most_avoided_subjects=most_avoided[:3],
     )
 
 

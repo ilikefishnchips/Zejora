@@ -26,6 +26,7 @@
         <button class="nav-item" data-scroll="overdue"><span class="nav-icon">!</span> Overdue <span class="nav-count" id="overdue-count">0</span></button>
         <button class="nav-item" data-view="calendar"><span class="nav-icon">◫</span> Calendar</button>
         <button class="nav-item" data-scroll="analytics"><span class="nav-icon">↗</span> Insights</button>
+        <button class="nav-item" data-scroll="procrastination"><span class="nav-icon">⚠</span> Procrastination</button>
       </nav>
 
       <div class="subjects-heading">
@@ -181,6 +182,90 @@
             </div>
             <div id="calendar-day-task-list"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- Procrastination Insights Section -->
+      <section class="procrastination-section" id="procrastination-section">
+        <div class="section-header-row">
+          <div>
+            <p class="section-kicker">Behavioral analysis</p>
+            <h2 class="section-title">Procrastination insights.</h2>
+          </div>
+          <p class="section-desc">Understand your delay patterns and get actionable recommendations to improve on time.</p>
+        </div>
+
+        <!-- Score card -->
+        <div class="proc-scorecard">
+          <div class="proc-score-main">
+            <div class="proc-score-ring" id="proc-score-ring" style="--pscore:0">
+              <strong id="proc-score">—</strong>
+              <span>/100</span>
+            </div>
+            <div class="proc-score-labels">
+              <span class="proc-level-badge" id="proc-level">—</span>
+              <span class="proc-score-desc">Productivity Level</span>
+            </div>
+          </div>
+          <div class="proc-stats-grid">
+            <div class="proc-stat">
+              <strong id="proc-avg-delay">—</strong>
+              <span>Avg delay (days)</span>
+            </div>
+            <div class="proc-stat">
+              <strong id="proc-overdue-rate">—%</strong>
+              <span>Overdue rate</span>
+            </div>
+            <div class="proc-stat">
+              <strong id="proc-avg-postpone">—</strong>
+              <span>Avg postponements</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="proc-charts-row">
+          <article class="chart-card">
+            <div class="chart-card-title"><div><span>Delay by subject</span><strong>Avg days late</strong></div></div>
+            <div class="chart-wrap"><canvas id="proc-subject-chart"></canvas></div>
+          </article>
+          <article class="chart-card">
+            <div class="chart-card-title"><div><span>Delay by priority</span><strong>Avg days late</strong></div></div>
+            <div class="chart-wrap"><canvas id="proc-priority-chart"></canvas></div>
+          </article>
+        </div>
+
+        <!-- Weekly delay trend -->
+        <article class="chart-card chart-wide">
+          <div class="chart-card-title">
+            <div><span>Weekly delay trend</span><strong>Last 8 weeks</strong></div>
+          </div>
+          <div class="chart-wrap"><canvas id="proc-trend-chart"></canvas></div>
+        </article>
+
+        <!-- Heatmap -->
+        <article class="chart-card chart-wide proc-heatmap-card">
+          <div class="chart-card-title"><div><span>Productivity heatmap</span><strong>When you complete tasks</strong></div></div>
+          <div class="heatmap-wrap">
+            <div class="heatmap-y-labels" id="heatmap-y-labels"></div>
+            <div class="heatmap-grid-wrap">
+              <div class="heatmap-x-labels" id="heatmap-x-labels"></div>
+              <div class="heatmap-grid" id="heatmap-grid"></div>
+            </div>
+          </div>
+          <p class="heatmap-legend"><span class="heatmap-swatch low"></span>Low<span class="heatmap-swatch mid"></span>Medium<span class="heatmap-swatch high"></span>High activity</p>
+        </article>
+
+        <!-- Avoided subjects + Recommendations -->
+        <div class="proc-bottom-row">
+          <article class="chart-card proc-avoided-card">
+            <div class="chart-card-title"><div><span>Subjects you avoid</span><strong>Highest delay risk</strong></div></div>
+            <ul class="proc-avoided-list" id="proc-avoided-list"><li class="proc-empty">No patterns detected yet.</li></ul>
+          </article>
+          <article class="chart-card proc-recs-card">
+            <div class="chart-card-title"><div><span>Recommendations</span><strong>Personalised for you</strong></div></div>
+            <ul class="proc-recs-list" id="proc-recs-list"><li class="proc-empty">Complete some tasks to get recommendations.</li></ul>
+          </article>
         </div>
       </section>
 

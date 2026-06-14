@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -38,6 +38,8 @@ class Task(Base):
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     estimated_hours: Mapped[float | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    delay_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    postpone_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

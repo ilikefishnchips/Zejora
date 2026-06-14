@@ -3,12 +3,14 @@ const state = {
   subjects: [],
   tasks: [],
   analytics: null,
+  procrastination: null,
   charts: {},
   calendarDate: new Date(),
   calendarSelectedDate: null,
   searchQuery: '',
   filterStatus: 'all',
   filterPriority: 'all',
+  filterSubject: null,
   reminderInterval: null,
   notifiedKeys: new Set(),
 };
@@ -221,7 +223,9 @@ async function saveReminderSettings() {
 function taskCard(task) {
   const urgentBadge = task.state === 'urgent' ? '<span class="state-badge">Due soon</span>' : '';
   const overdueBadge = task.state === 'overdue' ? '<span class="state-badge overdue-badge">Overdue</span>' : '';
+  const postponeBadge = task.postpone_count > 0 ? `<span class="postpone-badge" title="Postponed ${task.postpone_count} time(s)">⏩ ×${task.postpone_count}</span>` : '';
   const desc = task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : '';
+  const postponeBtn = !task.completed ? `<button class="task-action postpone-btn" data-action="postpone-task" aria-label="Postpone 1 day" title="Postpone 1 day">⏩</button>` : '';
   return `
     <article class="task-card state-${task.state}" data-task-id="${task.id}">
       <input class="task-check" type="checkbox" ${task.completed ? 'checked' : ''}
@@ -231,7 +235,7 @@ function taskCard(task) {
         <div class="task-title-row">
           <span class="task-title">${escapeHtml(task.title)}</span>
           <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-          ${urgentBadge}${overdueBadge}
+          ${urgentBadge}${overdueBadge}${postponeBadge}
         </div>
         <div class="task-meta">
           <span class="task-subject"><i class="subject-dot" style="background:${task.subject.color}"></i>${escapeHtml(task.subject.name)}</span>
@@ -240,6 +244,7 @@ function taskCard(task) {
         ${desc}
       </div>
       <div class="task-actions">
+        ${postponeBtn}
         <button class="task-action" data-action="edit-task" aria-label="Edit" title="Edit">✎</button>
         <button class="task-action delete" data-action="delete-task" aria-label="Delete" title="Delete">×</button>
       </div>
@@ -266,6 +271,7 @@ function applyFilters(tasks) {
     });
   }
   if (state.filterPriority !== 'all') f = f.filter((t) => t.priority === state.filterPriority);
+  if (state.filterSubject !== null) f = f.filter((t) => t.subject_id === state.filterSubject);
   return f;
 }
 
@@ -304,8 +310,8 @@ function renderTaskGroups() {
 // ─── Subjects ─────────────────────────────────────────────────────────────────
 function renderSubjects() {
   $('#subject-list').innerHTML = state.subjects.map((s) => `
-    <div class="subject-row" data-subject-id="${s.id}">
-      <button class="subject-filter" data-action="focus-subject" title="${escapeHtml(s.name)}">
+    <div class="subject-row ${state.filterSubject === s.id ? 'active' : ''}" data-subject-id="${s.id}">
+      <button class="subject-filter" data-action="filter-subject" title="${escapeHtml(s.name)}">
         <i class="subject-dot" style="background:${s.color}"></i>
         <span>${escapeHtml(s.name)}</span>
         <span class="subject-task-count">${s.task_count}</span>
@@ -480,19 +486,22 @@ function renderAll() {
   renderSummary();
   renderCharts();
   renderInsights();
+  renderProcrastination();
   renderCalendar();
 }
 
 async function refreshData() {
   try {
-    const [subjects, tasks, analytics] = await Promise.all([
+    const [subjects, tasks, analytics, procrastination] = await Promise.all([
       api('/api/subjects'),
       api('/api/tasks'),
       api(`/api/analytics/dashboard?timezone=${encodeURIComponent(timezone)}`),
+      api('/api/analytics/procrastination'),
     ]);
     state.subjects = subjects;
     state.tasks = tasks;
     state.analytics = analytics;
+    state.procrastination = procrastination;
     renderAll();
     setTimeout(checkDeadlines, 1500);
   } catch (err) {
@@ -637,6 +646,154 @@ async function deleteTask(task) {
   }
 }
 
+async function postponeTask(task) {
+  try {
+    await api(`/api/tasks/${task.id}/postpone`, { method: 'PATCH', body: JSON.stringify({ days: 1 }) });
+    showToast('Task postponed by 1 day.');
+    await refreshData();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ─── Procrastination ──────────────────────────────────────────────────────────
+function renderProcrastination() {
+  const p = state.procrastination;
+  if (!p) return;
+
+  $('#proc-score').textContent = p.procrastination_score;
+  $('#proc-score-ring').style.setProperty('--pscore', p.procrastination_score);
+  $('#proc-level').textContent = p.productivity_level;
+  $('#proc-level').className = `proc-level-badge level-${p.productivity_level.toLowerCase().replace(/\s+/g, '-')}`;
+  $('#proc-avg-delay').textContent = p.avg_delay_days.toFixed(1);
+  $('#proc-overdue-rate').textContent = `${p.overdue_rate}%`;
+  $('#proc-avg-postpone').textContent = p.avg_postpone_count.toFixed(1);
+
+  // Avoided subjects
+  const avoidedEl = $('#proc-avoided-list');
+  if (p.most_avoided_subjects.length) {
+    avoidedEl.innerHTML = p.most_avoided_subjects.map((name) => {
+      const subj = state.subjects.find((s) => s.name === name);
+      const color = subj?.color || '#ccc';
+      return `<li class="proc-avoided-item"><i class="subject-dot" style="background:${color}"></i><span>${escapeHtml(name)}</span></li>`;
+    }).join('');
+  } else {
+    avoidedEl.innerHTML = '<li class="proc-empty">No patterns detected yet.</li>';
+  }
+
+  // Recommendations
+  const recsEl = $('#proc-recs-list');
+  recsEl.innerHTML = p.recommendations.map((r) =>
+    `<li class="proc-rec-item"><span class="proc-rec-icon">💡</span><span>${escapeHtml(r)}</span></li>`
+  ).join('');
+
+  // Heatmap
+  renderHeatmap(p.heatmap);
+
+  // Charts
+  if (!window.Chart) return;
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+  const tickColor = isDark ? '#a09790' : '#78716c';
+  const chartDefaults = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } } },
+      y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }, beginAtZero: true },
+    },
+  };
+
+  // Delay by subject chart
+  if (state.charts.procSubject) state.charts.procSubject.destroy();
+  const subjectData = p.by_subject.filter((s) => s.total_tasks > 0);
+  state.charts.procSubject = new Chart($('#proc-subject-chart'), {
+    type: 'bar',
+    data: {
+      labels: subjectData.map((s) => s.name),
+      datasets: [{
+        data: subjectData.map((s) => s.avg_delay),
+        backgroundColor: subjectData.map((s) => s.color + 'cc'),
+        borderColor: subjectData.map((s) => s.color),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }],
+    },
+    options: { ...chartDefaults },
+  });
+
+  // Delay by priority chart
+  if (state.charts.procPriority) state.charts.procPriority.destroy();
+  const priColors = { low: '#B8D8BA', medium: '#F4D58D', high: '#FFB7B2' };
+  state.charts.procPriority = new Chart($('#proc-priority-chart'), {
+    type: 'bar',
+    data: {
+      labels: p.by_priority.map((x) => x.priority.charAt(0).toUpperCase() + x.priority.slice(1)),
+      datasets: [{
+        data: p.by_priority.map((x) => x.avg_delay),
+        backgroundColor: p.by_priority.map((x) => priColors[x.priority] + 'cc'),
+        borderColor: p.by_priority.map((x) => priColors[x.priority]),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }],
+    },
+    options: { ...chartDefaults },
+  });
+
+  // Weekly delay trend chart
+  if (state.charts.procTrend) state.charts.procTrend.destroy();
+  const accentColor = isDark ? '#f38f88' : '#f07068';
+  state.charts.procTrend = new Chart($('#proc-trend-chart'), {
+    type: 'line',
+    data: {
+      labels: p.weekly_delay_trend.map((x) => x.label),
+      datasets: [{
+        data: p.weekly_delay_trend.map((x) => x.avg_delay),
+        borderColor: accentColor,
+        backgroundColor: accentColor + '22',
+        tension: 0.4, fill: true, pointRadius: 4,
+        pointBackgroundColor: accentColor,
+      }],
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y.toFixed(1)} days late` } },
+      },
+    },
+  });
+}
+
+function renderHeatmap(cells) {
+  const container = $('#heatmap-grid');
+  const yLabels = $('#heatmap-y-labels');
+  const xLabels = $('#heatmap-x-labels');
+  if (!container) return;
+
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const countMap = {};
+  cells.forEach(({ day, hour, count }) => { countMap[`${day}-${hour}`] = count; });
+  const maxCount = Math.max(1, ...cells.map((c) => c.count));
+
+  xLabels.innerHTML = days.map((d) => `<span class="heatmap-day-label">${d}</span>`).join('');
+  yLabels.innerHTML = hours.map((h) => {
+    const label = h % 6 === 0 ? (h === 0 ? '12am' : h === 12 ? '12pm' : `${h > 12 ? h - 12 : h}${h >= 12 ? 'pm' : 'am'}`) : '';
+    return `<span class="heatmap-hour-label">${label}</span>`;
+  }).join('');
+
+  let html = '';
+  hours.forEach((h) => {
+    days.forEach((_, d) => {
+      const count = countMap[`${d}-${h}`] || 0;
+      const intensity = count === 0 ? 0 : Math.ceil((count / maxCount) * 4);
+      html += `<div class="heatmap-cell intensity-${intensity}" title="${days[d]} ${h}:00 — ${count} task(s)"></div>`;
+    });
+  });
+  container.innerHTML = html;
+}
+
 // ─── Sidebar / nav ────────────────────────────────────────────────────────────
 function closeSidebar() {
   $('#sidebar').classList.remove('open');
@@ -664,6 +821,13 @@ document.addEventListener('click', async (event) => {
   if (action === 'edit-task') openTaskModal(task);
   if (action === 'delete-task') await deleteTask(task);
   if (action === 'toggle-task') await toggleTask(task, t.checked);
+  if (action === 'postpone-task') await postponeTask(task);
+  if (action === 'filter-subject') {
+    state.filterSubject = state.filterSubject === subject.id ? null : subject.id;
+    renderSubjects();
+    renderTaskGroups();
+    closeSidebar();
+  }
   if (action === 'edit-subject') openSubjectModal(subject);
   if (action === 'select-cal-day') {
     state.calendarSelectedDate = t.dataset.calDate;
@@ -690,6 +854,7 @@ $$('[data-scroll]').forEach((btn) => btn.addEventListener('click', () => {
   closeSidebar();
 }));
 $('.nav-item[data-view="all"]').addEventListener('click', () => {
+  state.filterSubject = null;
   renderSubjects();
   renderTaskGroups();
   window.scrollTo({ top: 0, behavior: 'smooth' });

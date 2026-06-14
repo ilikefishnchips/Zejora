@@ -127,12 +127,18 @@ class TaskRead(TaskBase):
     id: int
     completed: bool
     completed_at: datetime | None
+    delay_days: float | None
+    postpone_count: int
     created_at: datetime
     updated_at: datetime
     state: TaskState
     is_urgent: bool
     is_overdue: bool
     subject: TaskSubject
+
+
+class PostponePayload(BaseModel):
+    days: int = Field(default=1, ge=1, le=30)
 
 
 class StatusDistribution(BaseModel):
@@ -183,3 +189,46 @@ class DashboardAnalytics(BaseModel):
     subject_workload: list[SubjectWorkload]
     weekly_completion: list[TrendPoint]
     study_insights: StudyInsight
+
+
+class ProcrastinationBySubject(BaseModel):
+    subject_id: int
+    name: str
+    color: str
+    avg_delay: float
+    overdue_pct: float
+    total_tasks: int
+    completed_tasks: int
+
+
+class ProcrastinationByPriority(BaseModel):
+    priority: str
+    avg_delay: float
+    overdue_pct: float
+
+
+class DelayTrendPoint(BaseModel):
+    week_start: str
+    label: str
+    avg_delay: float
+    task_count: int
+
+
+class HeatmapCell(BaseModel):
+    day: int
+    hour: int
+    count: int
+
+
+class ProcrastinationAnalytics(BaseModel):
+    procrastination_score: float
+    productivity_level: str
+    avg_delay_days: float
+    overdue_rate: float
+    avg_postpone_count: float
+    by_subject: list[ProcrastinationBySubject]
+    by_priority: list[ProcrastinationByPriority]
+    weekly_delay_trend: list[DelayTrendPoint]
+    heatmap: list[HeatmapCell]
+    recommendations: list[str]
+    most_avoided_subjects: list[str]
