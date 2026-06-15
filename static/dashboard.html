@@ -379,27 +379,29 @@
   <dialog class="modal" id="task-modal">
     <form method="dialog" class="modal-card task-modal-card" id="task-form">
       <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
-      <span class="script-small">put it somewhere trusted</span>
-      <h2 id="task-modal-title">Add a task</h2>
-      <input type="hidden" id="task-id">
-      <label>Task title<input id="task-title" maxlength="140" placeholder="What needs to get done?" required></label>
-      <label>Description <span>(optional)</span><textarea id="task-description" maxlength="2000" rows="3" placeholder="Add notes, requirements, or a useful link"></textarea></label>
-      <div class="form-row">
-        <label>Subject<select id="task-subject" required></select></label>
-        <label>Due date and time<input id="task-due" type="datetime-local" required></label>
-      </div>
-      <div class="form-row">
-        <label>Est. study hours <span>(optional)</span><input id="task-hours" type="number" min="0" max="100" step="0.5" placeholder="e.g. 2.5"></label>
-      </div>
-      <fieldset>
-        <legend>Priority</legend>
-        <div class="priority-options">
-          <label><input type="radio" name="priority" value="low"><span>Low</span></label>
-          <label><input type="radio" name="priority" value="medium" checked><span>Medium</span></label>
-          <label><input type="radio" name="priority" value="high"><span>High</span></label>
+      <div class="modal-body">
+        <span class="script-small">put it somewhere trusted</span>
+        <h2 id="task-modal-title">Add a task</h2>
+        <input type="hidden" id="task-id">
+        <label>Task title<input id="task-title" maxlength="140" placeholder="What needs to get done?" required></label>
+        <label>Description <span>(optional)</span><textarea id="task-description" maxlength="2000" rows="2" placeholder="Add notes, requirements, or a useful link"></textarea></label>
+        <div class="form-row">
+          <label>Subject<select id="task-subject" required></select></label>
+          <label>Due date and time<input id="task-due" type="datetime-local" required></label>
         </div>
-      </fieldset>
-      <p class="form-error" id="task-error"></p>
+        <div class="form-row">
+          <label>Est. study hours <span>(optional)</span><input id="task-hours" type="number" min="0" max="100" step="0.5" placeholder="e.g. 2.5"></label>
+        </div>
+        <fieldset>
+          <legend>Priority</legend>
+          <div class="priority-options">
+            <label><input type="radio" name="priority" value="low"><span>Low</span></label>
+            <label><input type="radio" name="priority" value="medium" checked><span>Medium</span></label>
+            <label><input type="radio" name="priority" value="high"><span>High</span></label>
+          </div>
+        </fieldset>
+        <p class="form-error" id="task-error"></p>
+      </div>
       <div class="modal-actions">
         <button class="button button-soft" type="button" data-close-dialog>Cancel</button>
         <button class="button button-primary" type="submit" value="default">Save task</button>
