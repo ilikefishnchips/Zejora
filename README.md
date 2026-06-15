@@ -1,22 +1,23 @@
 # Zejora
 
-> **Study. Organize. Achieve more.**
->
-> One system for a calmer, clearer academic life.
+> **Study smarter. Beat procrastination. Own your semester.**
 
-Zejora is a full-stack campus task manager built for students who need one reliable place to organize subjects, coursework, assignments, and deadlines. It combines structured task management with time-aware prioritization and live productivity analytics, while keeping the experience lightweight, responsive, and easy to understand.
+Zejora is a full-stack academic productivity platform built for students who need one reliable place to organize subjects, coursework, assignments, and deadlines. Beyond simple task management, it tracks behavioral patterns, surfaces procrastination insights, delivers browser deadline reminders, and visualizes workload through live analytics — all in a clean, distraction-free interface.
 
-The project uses **FastAPI**, **SQLAlchemy**, and **SQLite** on the backend, with a pure **HTML, CSS, and vanilla JavaScript** frontend. There is no frontend framework: all interactions use the browser Fetch API and update the interface without page reloads.
+Built with **FastAPI**, **SQLAlchemy**, and **SQLite** on the backend, and a pure **HTML, CSS, and Vanilla JavaScript** frontend with no framework dependencies.
+
+---
 
 ## Table of Contents
 
 - [Why Zejora](#why-zejora)
-- [Core Features](#core-features)
-- [Product Experience](#product-experience)
+- [Feature Overview](#feature-overview)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
 - [Data Model](#data-model)
 - [Deadline Intelligence](#deadline-intelligence)
+- [Procrastination Analysis System](#procrastination-analysis-system)
 - [API Reference](#api-reference)
 - [Analytics](#analytics)
 - [Project Structure](#project-structure)
@@ -24,227 +25,320 @@ The project uses **FastAPI**, **SQLAlchemy**, and **SQLite** on the backend, wit
 - [Testing](#testing)
 - [Design System](#design-system)
 - [Engineering Decisions](#engineering-decisions)
-- [Future Improvements](#future-improvements)
+
+---
 
 ## Why Zejora
 
-Students often manage several subjects through disconnected learning portals, chat groups, calendars, notes, and mental reminders. This makes it easy to lose track of an assignment, underestimate an approaching deadline, or miss the larger pattern in an academic workload.
+Students juggle five subjects across disconnected portals, group chats, calendars, and notes. Assignments slip through the cracks. Deadlines appear out of nowhere. The real problem is not a lack of tools — it is a lack of one coherent system.
 
-Zejora addresses that problem through four principles:
+Zejora is built around four principles:
 
-1. **Organize by subject** so every academic task has a clear context.
-2. **Make deadlines visible** through Today, Upcoming, Overdue, and Urgent classifications.
-3. **Reduce interface noise** so students can focus on the next meaningful action.
-4. **Turn activity into insight** through workload and completion analytics.
+1. **Organize by subject** — every task has a clear academic context.
+2. **Make deadlines visible** — Today, Upcoming, Urgent, and Overdue views prevent surprises.
+3. **Understand your behavior** — procrastination scoring and delay analytics help students recognize patterns, not just symptoms.
+4. **Act on insight** — personalised recommendations and browser reminders turn data into changed habits.
 
-The goal is not to add another complicated planning system. Zejora is designed to feel like an academic command center that is simple, focused, and supportive.
+---
 
-## Core Features
+## Feature Overview
 
-### Subject management
+### Subject Management
+- Create, rename, recolor, and delete academic subjects (Data Structures, Cybersecurity, AI, Mathematics, Software Engineering, etc.)
+- Each subject acts as a container for related tasks and assignments
+- Task counts displayed per subject in the sidebar
+- Confirmation-gated cascade deletion when a subject still contains tasks
+- Case-insensitive uniqueness enforcement
 
-- Create, view, rename, recolor, and delete academic subjects.
-- Use subjects as containers for related assignments and study tasks.
-- Filter the dashboard to a single subject using focus mode.
-- Prevent accidental data loss by requiring explicit confirmation before deleting a subject with tasks.
-- Enforce case-insensitive subject-name uniqueness.
+### Task Management
+- Create tasks with title, description, subject, due date and time, priority (Low / Medium / High), and estimated study hours
+- Edit and delete tasks without page reloads
+- Mark tasks complete or reopen them at any time
+- Completion timestamps recorded automatically for behavioral analytics
+- `postpone_count` tracked automatically every time a task's deadline is moved
+- Full-text search across title, description, and subject name
+- Filter by status (Pending, Urgent, Overdue, Done) and priority simultaneously
 
-### Task management
+### Smart Deadline Tracking
+- Tasks automatically classified as **Completed**, **Urgent**, **Overdue**, or **Pending** based on current time
+- Dashboard grouped into **Today**, **Overdue**, **Upcoming**, **Later**, and **Completed** sections
+- Urgent tasks highlighted amber, overdue tasks highlighted red, completed tasks shown in green
+- Timezone-aware: Today and Upcoming windows use the browser's local timezone
 
-- Create tasks with a title, optional description, subject, due date and time, and priority.
-- Edit and delete tasks without reloading the page.
-- Mark tasks complete or reopen them later.
-- Record completion timestamps for historical analytics.
-- Display low, medium, and high priority badges.
+### Procrastination Analysis System
+- Procrastination score (0–100) with categories: Excellent, Good, Moderate, Serious, Chronic Procrastinator
+- Average delay days, overdue percentage, and average postponement count
+- Per-subject delay breakdown — identifies which subjects students avoid most
+- Per-priority delay analysis — reveals whether low-priority tasks slip furthest
+- 8-week weekly overdue trend chart
+- Warning banners for frequently avoided subjects (≥30% overdue rate)
+- Top 5 most-postponed tasks with postponement counts
+- Personalised, data-driven recommendations generated automatically
 
-### Smart deadline tracking
+### Browser Deadline Reminder System
+- Requests browser notification permission on first dashboard visit
+- Background check runs on a configurable interval (1 min to 30 min)
+- Notifies for tasks due within 24 hours, within 1 hour, and overdue tasks
+- Notifications include task title, subject name, remaining time, and motivational message
+- Reminder settings panel: enable/disable per alert type, adjust interval
+- Preferences stored in `localStorage` and persist across sessions
 
-- Group work into **Today**, **Upcoming**, **Overdue**, **Later**, and **Completed** sections.
-- Highlight tasks due within 24 hours as urgent.
-- Highlight incomplete tasks past their deadline as overdue.
-- Interpret Today and Upcoming windows using the browser's local timezone.
-- Store normalized timestamps consistently in the database.
+### Live Analytics Dashboard (Chart.js)
+- Pie / doughnut chart: task status distribution (Completed / Pending / Overdue)
+- Bar chart: workload distribution by subject
+- Line chart: 8-week task completion trend
+- Doughnut chart: priority distribution (High / Medium / Low)
+- Productivity score card (completion rate minus overdue penalty)
+- All charts update dynamically after every task or subject change
 
-### Live analytics
+### Calendar View
+- Monthly calendar showing tasks by due date
+- Color-coded dots per subject on each day cell
+- Overdue and urgent indicator borders on affected days
+- Click any date to view a task panel for that day
+- Month navigation with previous/next controls
 
-- Show total, completed, pending, overdue, urgent, and due-today counts.
-- Calculate the overall completion rate.
-- Visualize task status with a doughnut chart.
-- Compare workload across subjects with a bar chart.
-- Display completion momentum over the previous eight weeks with a line chart.
-- Refresh all charts after task creation, editing, completion, reopening, or deletion.
+### Study Insights
+- Productivity score with labeled performance level
+- Most active subject (highest task count)
+- Tasks completed this week
 
-### Responsive experience
+### Dark Mode
+- Full dark theme across landing page and dashboard
+- Toggle in the sidebar or header
+- Preference persisted in `localStorage`
+- Charts re-render automatically on theme change
 
-- Provide separate landing and dashboard pages.
-- Support desktop, tablet, and mobile layouts.
-- Use reusable native dialogs for task and subject forms.
-- Include loading-safe API handling, validation messages, empty states, and toast feedback.
-- Respect keyboard focus and `prefers-reduced-motion` settings.
+### UX Polish
+- Polished landing page with hero section, feature cards, analytics showcase, testimonials, and call-to-action
+- Responsive layout for desktop, tablet, and mobile
+- Toast notifications for all user actions
+- Native `<dialog>` modals for forms and confirmations
+- Empty states, form validation, and graceful error feedback
+- `prefers-reduced-motion` support throughout
 
-## Product Experience
+---
 
-### Landing page
+## Screenshots
 
-The landing page introduces Zejora as a student-focused productivity tool. It explains the problem of scattered coursework, presents the core value proposition, previews the dashboard, highlights key features, and directs the student to get started.
+| Landing page | Dashboard |
+|---|---|
+| Hero section, features, analytics preview, testimonials | Tasks, subjects, calendar, charts, procrastination insights |
 
-### Dashboard
+*Run the app locally to see the full experience.*
 
-The dashboard is the working center of the application:
-
-- The left sidebar lists subjects and activates subject focus mode.
-- Summary cards show immediate workload indicators.
-- Tasks are grouped by their relationship to the current date.
-- Each task card supports completion, editing, and deletion.
-- The analytics section translates current and historical task data into visual insights.
-
-The dashboard behaves like a lightweight single-page application even though it is implemented with framework-free JavaScript.
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    U["Student"] --> UI["HTML, CSS, and vanilla JavaScript"]
-    UI -->|"Fetch API / JSON request"| API["FastAPI REST API"]
-    API --> V["Pydantic validation"]
-    V --> S["Business and deadline logic"]
-    S --> ORM["SQLAlchemy ORM"]
-    ORM --> DB[("SQLite database")]
-    DB --> ORM
+    U["Student"] --> LP["Landing page"]
+    LP --> DB["Dashboard"]
+    DB -->|"Fetch API / JSON"| API["FastAPI REST API"]
+    API --> PV["Pydantic validation"]
+    PV --> SVC["Service layer\n(timezone · classification)"]
+    SVC --> ORM["SQLAlchemy ORM"]
+    ORM --> SQLITE[("SQLite database")]
+    SQLITE --> ORM
     ORM --> API
-    API -->|"JSON response"| UI
-    S --> A["Analytics aggregation"]
-    A --> C["Chart.js visualizations"]
+    API -->|"JSON response"| DB
+    SVC --> ANAL["Analytics aggregation\n(dashboard + procrastination)"]
+    ANAL --> CHARTS["Chart.js visualizations"]
+    DB --> NOTIF["Notification API\n(browser reminders)"]
+    DB --> LS["localStorage\n(theme · reminder prefs)"]
 ```
 
 ### Request flow
 
-1. A student performs an action in the dashboard.
-2. Vanilla JavaScript sends a JSON request through the Fetch API.
-3. FastAPI routes the request and Pydantic validates its data.
-4. The service layer applies timezone and task-state rules.
-5. SQLAlchemy reads or writes the corresponding SQLite records.
+1. Student performs an action on the dashboard.
+2. Vanilla JavaScript sends a JSON request via the Fetch API.
+3. FastAPI routes the request; Pydantic validates the body.
+4. The service layer applies timezone normalization and task-state rules.
+5. SQLAlchemy reads or writes the appropriate SQLite records.
 6. FastAPI returns a structured JSON response.
-7. The frontend updates tasks, counters, subjects, and charts without reloading.
+7. JavaScript updates tasks, counters, subjects, and charts in-place.
+8. The notification service checks deadlines in the background and fires browser alerts.
+
+---
 
 ## Technology Stack
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Backend | Python, FastAPI | REST endpoints, business logic, automatic API documentation |
-| Validation | Pydantic | Typed request and response validation |
-| ORM | SQLAlchemy 2 | Models, relationships, queries, and database interactions |
-| Database | SQLite | Lightweight, serverless local persistence |
+| Backend | Python 3.11+, FastAPI | REST endpoints, business logic, auto-generated API docs |
+| Validation | Pydantic v2 | Typed request/response contracts with field-level validation |
+| ORM | SQLAlchemy 2 | Models, relationships, queries, and session management |
+| Database | SQLite | Serverless local persistence with foreign-key enforcement |
 | Server | Uvicorn | ASGI development server |
-| Frontend | HTML5 | Semantic landing page and dashboard structure |
-| Styling | CSS3 | Responsive layouts, design tokens, animations, and component styling |
-| UI logic | Vanilla JavaScript | Fetch requests, dialogs, filtering, rendering, and state synchronization |
-| Visualization | Chart.js | Status, workload, and completion-trend charts |
-| Testing | Pytest, HTTPX | API and business-logic verification |
+| Frontend | HTML5 | Semantic structure for landing page and dashboard |
+| Styling | CSS3 | Design tokens, responsive layouts, animations, dark mode |
+| UI logic | Vanilla JavaScript | Fetch, DOM updates, state, dialogs, charts, notifications |
+| Visualization | Chart.js 4 | Status, workload, completion-trend, and procrastination charts |
+| Testing | Pytest, HTTPX | API and business-logic test suite |
+
+---
 
 ## Data Model
 
-Zejora deliberately uses two core entities to keep the academic domain easy to reason about.
-
 ### Subject
 
-| Field | Description |
-|---|---|
-| `id` | Primary key |
-| `name` | Case-insensitively unique subject name |
-| `color` | Hex color used throughout the dashboard and charts |
-| `created_at` | Automatic creation timestamp |
-| `updated_at` | Automatic update timestamp |
+| Field | Type | Description |
+|---|---|---|
+| `id` | Integer PK | Auto-incremented primary key |
+| `name` | String(80) | Case-insensitively unique subject name |
+| `color` | String(7) | Hex color used in sidebar, charts, and task cards |
+| `created_at` | DateTime | Automatic creation timestamp |
+| `updated_at` | DateTime | Automatic update timestamp |
 
 ### Task
 
-| Field | Description |
-|---|---|
-| `id` | Primary key |
-| `title` | Required task title |
-| `description` | Optional supporting details |
-| `subject_id` | Foreign key linking the task to a subject |
-| `due_at` | Required deadline normalized for storage |
-| `priority` | `low`, `medium`, or `high` |
-| `completed` | Current completion state |
-| `completed_at` | Timestamp used for completion analytics |
-| `created_at` | Automatic creation timestamp |
-| `updated_at` | Automatic update timestamp |
+| Field | Type | Description |
+|---|---|---|
+| `id` | Integer PK | Auto-incremented primary key |
+| `title` | String(140) | Required task title |
+| `description` | Text | Optional supporting details |
+| `subject_id` | FK → Subject | Owning subject; cascade-deletes with subject |
+| `due_at` | DateTime | Required deadline stored as UTC |
+| `priority` | String | `low`, `medium`, or `high` |
+| `completed` | Boolean | Current completion flag |
+| `estimated_hours` | Float | Optional study-time estimate |
+| `postpone_count` | Integer | Auto-incremented each time `due_at` changes on an incomplete task |
+| `completed_at` | DateTime | Set when task is marked complete; cleared on reopen |
+| `created_at` | DateTime | Automatic creation timestamp |
+| `updated_at` | DateTime | Automatic update timestamp |
 
-Deleting a subject can cascade to its tasks, but the API first returns a conflict containing the affected task count unless the client explicitly confirms cascade deletion.
+Deleting a subject with tasks returns a `409` conflict with the task count unless `?cascade=true` is explicitly passed.
+
+---
 
 ## Deadline Intelligence
 
-Task states are computed from the current time rather than stored as duplicated database values:
+Task states are computed dynamically from the current time — never stored as stale columns:
 
 | State | Rule |
 |---|---|
-| **Completed** | The task's completion flag is true |
-| **Overdue** | The task is incomplete and its due time has passed |
-| **Urgent** | The task is incomplete and due within the next 24 hours |
-| **Pending** | The task is incomplete, not overdue, and more than 24 hours away |
+| **Completed** | `completed = true` |
+| **Overdue** | `completed = false` and `due_at < now` |
+| **Urgent** | `completed = false` and `now ≤ due_at ≤ now + 24h` |
+| **Pending** | `completed = false` and `due_at > now + 24h` |
 
-Calendar groups add another useful perspective:
+Calendar grouping works relative to the student's local timezone:
 
-- **Today** uses the student's local calendar day.
-- **Upcoming** covers the following seven calendar days.
-- **Later** contains incomplete work outside those windows.
-- **Completed** keeps finished work available for review and analytics.
+| Group | Window |
+|---|---|
+| **Today** | Current local calendar day |
+| **Upcoming** | Next 7 local calendar days |
+| **Later** | Beyond 7 days |
+| **Overdue** | Past deadline, incomplete |
+| **Completed** | Finished, sorted by `completed_at` descending |
 
-This separation avoids stale status columns and ensures consistent results across the API and dashboard.
+---
+
+## Procrastination Analysis System
+
+The `/api/analytics/procrastination` endpoint aggregates behavioral signals and returns:
+
+### Scoring
+
+```
+procrastination_score = (overdue_% × 0.45) + (avg_delay_days/14 × 30) + (avg_postpone/5 × 25)
+```
+
+Clamped to 0–100. Category thresholds:
+
+| Score | Category |
+|---|---|
+| 0–20 | Excellent |
+| 21–40 | Good |
+| 41–60 | Moderate |
+| 61–80 | Serious |
+| 81–100 | Chronic Procrastinator |
+
+### Metrics returned
+
+| Metric | Description |
+|---|---|
+| `score` | Composite procrastination score 0–100 |
+| `category` | Human-readable performance category |
+| `avg_delay_days` | Average days late across completed tasks |
+| `overdue_percentage` | Percentage of all tasks currently overdue |
+| `avg_postpone_count` | Average number of deadline changes per task |
+| `subject_delays` | Per-subject avg delay, overdue count, overdue rate |
+| `priority_delays` | Avg delay broken down by High / Medium / Low priority |
+| `weekly_overdue` | 8-week overdue count + rate trend |
+| `frequently_avoided` | Subjects with ≥30% overdue rate |
+| `most_postponed_tasks` | Top 5 tasks by postpone count |
+| `recommendations` | Personalised advice strings generated from the data |
+
+### Postponement tracking
+
+Every time a PATCH request changes `due_at` on an incomplete task, the backend automatically increments `postpone_count`. No client-side action required.
+
+---
 
 ## API Reference
 
-FastAPI also generates interactive documentation at `/docs` and a ReDoc reference at `/redoc`.
+Full interactive documentation: `http://127.0.0.1:8000/docs`
+ReDoc reference: `http://127.0.0.1:8000/redoc`
 
 ### System
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/health` | Return API and product health information |
+| `GET` | `/api/health` | API health check |
 
 ### Subjects
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/subjects` | List subjects with task counts |
+| `GET` | `/api/subjects` | List all subjects with task counts |
 | `POST` | `/api/subjects` | Create a subject |
-| `GET` | `/api/subjects/{subject_id}` | Retrieve one subject |
-| `PATCH` | `/api/subjects/{subject_id}` | Update a subject |
-| `DELETE` | `/api/subjects/{subject_id}` | Delete an empty subject |
-| `DELETE` | `/api/subjects/{subject_id}?cascade=true` | Confirm deletion of a subject and its tasks |
+| `GET` | `/api/subjects/{id}` | Get one subject |
+| `PATCH` | `/api/subjects/{id}` | Rename or recolor a subject |
+| `DELETE` | `/api/subjects/{id}` | Delete empty subject |
+| `DELETE` | `/api/subjects/{id}?cascade=true` | Delete subject and all its tasks |
 
 ### Tasks
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/tasks` | List tasks, optionally filtered by subject or completion state |
+| `GET` | `/api/tasks` | List tasks (filter: `subject_id`, `completed`, `priority`, `search`, `sort_by`, `sort_dir`) |
 | `POST` | `/api/tasks` | Create a task |
-| `GET` | `/api/tasks/{task_id}` | Retrieve one task |
-| `PATCH` | `/api/tasks/{task_id}` | Edit task details or completion state |
-| `DELETE` | `/api/tasks/{task_id}` | Delete a task |
-| `GET` | `/api/tasks/due/today` | List tasks due on the local calendar day |
-| `GET` | `/api/tasks/due/upcoming` | List tasks due in the next seven calendar days |
-| `GET` | `/api/tasks/due/overdue` | List incomplete tasks past their deadline |
-
-The Today and Upcoming endpoints accept a `timezone` query parameter such as `Asia/Kuala_Lumpur`.
+| `GET` | `/api/tasks/{id}` | Get one task |
+| `PATCH` | `/api/tasks/{id}` | Edit task fields or toggle completion |
+| `DELETE` | `/api/tasks/{id}` | Delete a task |
+| `GET` | `/api/tasks/due/today` | Tasks due today (accepts `timezone`) |
+| `GET` | `/api/tasks/due/upcoming` | Tasks due in the next 7 days (accepts `timezone`) |
+| `GET` | `/api/tasks/due/overdue` | Incomplete tasks past their deadline |
 
 ### Analytics
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/analytics/dashboard` | Return summary statistics, status distribution, subject workload, and eight-week completion history |
+| `GET` | `/api/analytics/dashboard` | Summary stats, status/priority/workload distributions, 8-week trend |
+| `GET` | `/api/analytics/procrastination` | Full procrastination report with scores, delays, trends, and recommendations |
+
+---
 
 ## Analytics
 
-The analytics endpoint returns four coordinated datasets:
+### Dashboard analytics (`/api/analytics/dashboard`)
 
-1. **Summary**: total tasks, completed, pending, overdue, urgent, due today, due within seven days, and completion rate.
-2. **Status distribution**: completed, pending, and overdue values for the doughnut chart.
-3. **Subject workload**: task counts and colors for each subject.
-4. **Weekly completion**: eight weekly buckets derived from `completed_at` timestamps.
+| Dataset | Contents |
+|---|---|
+| `summary` | total, completed, pending, overdue, urgent, due_today, due_next_7_days, completion_rate |
+| `status_distribution` | completed / pending / overdue counts for the doughnut chart |
+| `priority_distribution` | high / medium / low counts |
+| `subject_workload` | task counts and colors per subject for the bar chart |
+| `weekly_completion` | 8 weekly buckets of `completed_at` timestamps for the trend line |
+| `study_insights` | productivity_score, tasks_this_week |
 
-Charts are presentation-only. Classification and aggregation are performed by the backend so every client receives the same interpretation of the underlying task data.
+### Procrastination analytics (`/api/analytics/procrastination`)
+
+See [Procrastination Analysis System](#procrastination-analysis-system) above.
+
+---
 
 ## Project Structure
 
@@ -252,25 +346,27 @@ Charts are presentation-only. Classification and aggregation are performed by th
 zejora/
 ├── app/
 │   ├── __init__.py
-│   ├── database.py       # Engine, session factory, and SQLite configuration
-│   ├── main.py           # FastAPI routes, page serving, and analytics queries
-│   ├── models.py         # SQLAlchemy Subject and Task models
-│   ├── schemas.py        # Pydantic request and response contracts
-│   └── services.py       # Timezone conversion and task classification
+│   ├── database.py          # Engine, session factory, foreign-key pragma
+│   ├── main.py              # FastAPI routes, analytics queries, procrastination endpoint
+│   ├── models.py            # SQLAlchemy Subject and Task models
+│   ├── schemas.py           # Pydantic request/response contracts + analytics schemas
+│   └── services.py          # UTC helpers, timezone conversion, task classification
 ├── static/
 │   ├── css/
-│   │   └── styles.css    # Shared responsive design system
+│   │   └── styles.css       # Full design system: tokens, components, dark mode, responsive
 │   ├── js/
-│   │   ├── dashboard.js  # Dashboard state, CRUD actions, and Chart.js updates
-│   │   └── landing.js    # Reveal-on-scroll behavior
-│   ├── dashboard.html
-│   └── index.html
+│   │   ├── dashboard.js     # State, CRUD, charts, calendar, notifications, procrastination
+│   │   └── landing.js       # Reveal-on-scroll intersection observer
+│   ├── dashboard.html       # Dashboard shell with all panels and modals
+│   └── index.html           # Marketing landing page
 ├── tests/
-│   ├── conftest.py       # Isolated temporary SQLite test setup
-│   └── test_api.py       # API and business-rule tests
+│   ├── conftest.py          # Isolated in-memory SQLite test setup
+│   └── test_api.py          # API and business-rule test suite
 ├── requirements.txt
 └── README.md
 ```
+
+---
 
 ## Getting Started
 
@@ -278,117 +374,103 @@ zejora/
 
 - Python 3.11 or newer
 - `pip`
-- A modern browser with JavaScript enabled
+- A modern browser with JavaScript and notifications enabled
 
-### Windows PowerShell
+### Windows (PowerShell)
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-### macOS or Linux
+### macOS / Linux
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-Open the following URLs:
+### Open in browser
 
-- Landing page: `http://127.0.0.1:8000/`
-- Dashboard: `http://127.0.0.1:8000/dashboard`
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
+| URL | Page |
+|---|---|
+| `http://127.0.0.1:8000/` | Landing page |
+| `http://127.0.0.1:8000/dashboard` | Dashboard |
+| `http://127.0.0.1:8000/docs` | Swagger UI (interactive API docs) |
+| `http://127.0.0.1:8000/redoc` | ReDoc reference |
 
-The `zejora.db` SQLite database is created automatically in the project root on first startup.
+The `zejora.db` SQLite file is created automatically in the project root on first startup.
+
+---
 
 ## Testing
-
-Run the complete test suite from the project root:
 
 ```powershell
 python -m pytest -q
 ```
 
-The current suite covers:
+The test suite covers:
 
-- Health and frontend page responses
+- Health and page responses
 - Subject CRUD and case-insensitive uniqueness
 - Task CRUD and subject relationships
-- Completion and reopening transitions
-- Invalid priorities, subjects, and timezone-naive dates
-- Urgent and overdue classification
+- Completion and reopening state transitions
+- Invalid priorities, missing subjects, and timezone-naive dates
+- Urgent and overdue state classification
 - Today, upcoming, and overdue collections
-- Explicit cascade deletion behavior
-- Dashboard analytics and eight-week completion aggregation
+- Cascade deletion confirmation behavior
+- Dashboard analytics and 8-week completion aggregation
 
-Tests use a temporary SQLite database, leaving local Zejora data untouched.
-
-## Design System
-
-Zejora combines digital minimalism with a friendly student-lifestyle aesthetic.
-
-- **Background:** warm paper white `#FDFCF8`
-- **Text:** soft black `#292524`
-- **Primary accent:** coral `#FFB7B2`
-- **Supporting colors:** sage and lavender
-- **Typography:** Outfit for interface text and Reenie Beanie for expressive accents
-- **Surfaces:** generous rounded corners and restrained shadows
-- **Texture:** a fixed SVG grain overlay for a paper-like finish
-- **Motion:** reveal-on-scroll sections and gently floating decorative blobs
-
-Task states are communicated with both labels and color:
-
-- Urgent: yellow
-- Overdue: red
-- Completed: green
-
-## Engineering Decisions
-
-### Two-entity domain model
-
-Subjects and Tasks capture the core workflow without unnecessary complexity. Subjects provide academic context, while tasks contain actionable work and deadlines.
-
-### Backend-owned time rules
-
-Deadline classification and analytics are calculated centrally in Python. This avoids different clients interpreting urgent or overdue work differently.
-
-### Analytics-first API design
-
-The frontend receives chart-ready data from one dedicated endpoint. Chart.js remains focused on rendering instead of duplicating business logic.
-
-### Framework-free frontend
-
-Vanilla JavaScript keeps the client lightweight and demonstrates direct control of browser APIs, DOM rendering, native dialogs, and Fetch-based state updates.
-
-### Explicit destructive actions
-
-Deleting a populated subject requires a second request with `cascade=true`. The first response exposes the affected task count so the interface can present an informed confirmation.
-
-### Portable local storage
-
-SQLite provides relational integrity without requiring a separate database server, making Zejora easy to run for demonstrations, coursework, and hackathons.
-
-## Future Improvements
-
-The current application is intentionally a local, single-student system. Logical future extensions include:
-
-- User authentication and per-user data ownership
-- email deadline reminders
-- Alembic-managed database migrations
-- Calendar and learning-management-system integrations
-- Study-session or Pomodoro tracking
-- Offline support through a service worker
-- Import and export for coursework data
-- Deployment configuration for a hosted production environment
-
-These are roadmap ideas and are not part of the current implementation.
+Tests use an isolated in-memory SQLite database. Local `zejora.db` data is never touched.
 
 ---
 
-**Zejora** turns scattered academic responsibilities into one clear system: plan today, focus on what matters, and understand your progress over time.
+## Design System
+
+Zejora blends digital minimalism with a warm, student-lifestyle aesthetic:
+
+| Token | Value | Usage |
+|---|---|---|
+| `--paper` | `#FDFCF8` | Page background (light) |
+| `--ink` | `#292524` | Primary text and dark surfaces |
+| `--coral` | `#FFB7B2` | Primary accent — CTA buttons, urgent highlights |
+| `--sage` | `#E8EFE8` | Completed state, calm sections |
+| `--lavender` | `#EFEDF4` | Secondary accent — priority doughnut, modals |
+| `--yellow` | `#F8E6A6` | Urgent state badges |
+| `--red` | `#F4C8C5` | Overdue state, error surfaces |
+
+**Typography:** Outfit (interface) + Reenie Beanie (script accents)
+
+**Surfaces:** generous border-radius, restrained drop shadows, SVG grain overlay for paper texture
+
+**Motion:** reveal-on-scroll sections, floating blob decorations, smooth chart transitions, `prefers-reduced-motion` respected throughout
+
+---
+
+## Engineering Decisions
+
+### Backend-owned state classification
+Deadline states (urgent, overdue, pending) are computed in Python at query time rather than stored as columns. This ensures every client — API consumer, dashboard, tests — receives the same interpretation and eliminates stale status drift.
+
+### Behavioral postponement tracking
+`postpone_count` is incremented server-side whenever `due_at` changes on an incomplete task. The client never sends this value, preventing manipulation and ensuring trustworthy procrastination metrics.
+
+### Analytics-first API design
+Both analytics endpoints return chart-ready, aggregated JSON. Chart.js handles only rendering. Business logic (delay calculations, score formulas, recommendation generation) stays in Python where it can be tested independently.
+
+### Framework-free frontend
+Vanilla JavaScript keeps the client lightweight and directly demonstrates control of browser APIs — Fetch, Notification, `localStorage`, `<dialog>`, IntersectionObserver, and Chart.js — without a build step or bundler.
+
+### Explicit cascade deletion
+Deleting a populated subject requires a second request with `?cascade=true`. The first response exposes the task count so the frontend can present an informed confirmation before any data is lost.
+
+### Portable SQLite persistence
+No separate database server required. SQLite provides full relational integrity (foreign keys enforced via `PRAGMA foreign_keys=ON`) in a single file, making Zejora easy to run for development, coursework, and demonstrations.
+
+---
+
+**Zejora** — one calm system for every assignment, deadline, and study habit that shapes your semester.
